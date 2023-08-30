@@ -13,12 +13,6 @@ We used the provided lesion-centered 3D ROIs from the `classification_dataset` f
 ### 2. Data division
 We randomly generated a 5-fold cross-validated dataset. You can refer to the divided label files in the following path `./data/classification_dataset/labels`.
 
-## Training
-The pretrained model was extracted from the official repository of [Uniformer-B](https://github.com/Sense-X/UniFormer/tree/main/video_classification) (specified as Kinetics-400, #Frame:8x1x4, Sampling Stride:8) and layers of mismatching shapes was removed.  Download the [pruned pretrained model](https://pan.baidu.com/s/1pAw30E5hIGRHKC9wqbWmXQ?pwd=m2vi) (Password：m2vi) and put it into `./pretrained_weights/`, then use the following command to train two sets of 5-fold cross-validation models.
-
-```
-sh ./main/do_train.sh
-```
 ## Predict
 ### 1. Model inference 
 
@@ -37,3 +31,10 @@ Merge scores from all the prediction files above using the following command.
 $ sh ./main/do_ensemble.sh
 ```
 This will generate final prediction file `./pred_results/merged_score.json`.
+
+## Training
+The pretrained model was extracted from the official repository of [Uniformer-B](https://github.com/Sense-X/UniFormer/tree/main/video_classification) (specified as Kinetics-400, #Frame:8x1x4, Sampling Stride:8) and layers of mismatching shapes was removed.  Download the [pruned pretrained model](https://pan.baidu.com/s/1pAw30E5hIGRHKC9wqbWmXQ?pwd=m2vi) (Password：m2vi) and put it into `./pretrained_weights/`, then use the following command to train two sets of 5-fold cross-validation models.
+
+```
+sh ./main/do_train.sh
+```
