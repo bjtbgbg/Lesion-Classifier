@@ -105,148 +105,104 @@ def validate(args):
         else:
             _logger.warning("Neither APEX or Native Torch AMP is available.")
     assert not args.apex_amp or not args.native_amp, "Only one AMP mode should be set."
-    if args.native_amp:
-        amp_autocast = torch.cuda.amp.autocast
-        _logger.info('Validating in mixed precision with native PyTorch AMP.')
-    elif args.apex_amp:
-        _logger.info('Validating in mixed precision with NVIDIA APEX AMP.')
-    else:
-        _logger.info('Validating in float32. AMP not enabled.')
+    # if args.native_amp:
+    #     amp_autocast = torch.cuda.amp.autocast
+    #     _logger.info('Validating in mixed precision with native PyTorch AMP.')
+    # elif args.apex_amp:
+    #     _logger.info('Validating in mixed precision with NVIDIA APEX AMP.')
+    # else:
+    #     _logger.info('Validating in float32. AMP not enabled.')
 
     if args.legacy_jit:
         set_jit_legacy()
-    print(args.model)
+
     # create model
     model = create_model(
         args.model,
         pretrained=args.pretrained,
         num_classes=args.num_classes,
         pretrained_cfg=None)
-    
+
     if args.num_classes is None:
-        assert hasattr(model, 'num_classes'), 'Model must have `num_classes` attr if not set on cmd line/config.'
+        assert hasattr(
+            model, 'num_classes'), 'Model must have `num_classes` attr if not set on cmd line/config.'
         args.num_classes = model.num_classes
-    print(args.is_aux_head)
     if args.checkpoint:
         load_checkpoint(model, args.checkpoint, args.use_ema)
 
     param_count = sum([m.numel() for m in model.parameters()])
-    _logger.info('Model %s created, param count: %d' % (args.model, param_count))
-
+    _logger.info('Model %s created, param count: %d' %
+                 (args.model, param_count))
 
     model = model.cuda()
     if args.apex_amp:
         model = amp.initialize(model, opt_level='O1')
 
     if args.num_gpu > 1:
-        model = torch.nn.DataParallel(model, device_ids=list(range(args.num_gpu)))
-
-    criterion = nn.CrossEntropyLoss().cuda()
+        model = torch.nn.DataParallel(
+            model, device_ids=list(range(args.num_gpu)))
 
     dataset = MultiPhaseLiverDataset(args, is_training=False)
 
-    loader = DataLoader(dataset, 
-                        batch_size=args.batch_size, 
-                        num_workers=args.workers, 
+    loader = DataLoader(dataset,
+                        batch_size=args.batch_size,
+                        num_workers=args.workers,
                         pin_memory=args.pin_mem,
                         shuffle=False)
-
-    batch_time = AverageMeter()
 
     predictions = []
     labels = []
 
     model.eval()
+    pbar = tqdm(total=len(dataset))
     with torch.no_grad():
-        # warmup, reduce variability of first batch time, especially for comparing torchscript vs non
-        end = time.time()
-        for (input, target) in tqdm(loader):
+        for (input, target) in (loader):
             target = target.cuda()
             input = input.cuda()
             # compute output
             with amp_autocast():
                 output = model(input)
-            if args.is_aux_head:
-                output = output[0]
-                target = target[:, 0]
             predictions.append(output)
             labels.append(target)
-            # measure elapsed time
-            batch_time.update(time.time() - end)
-            end = time.time()
-    evaluation_metrics = compute_metrics(predictions, labels, criterion, args)
-    return evaluation_metrics
+            pbar.update(args.batch_size)
+        pbar.close()
+    return process_prediction(predictions)
 
-def compute_metrics(outputs, targets, loss_fn, args):
+
+def process_prediction(outputs):
     outputs = torch.cat(outputs, dim=0).detach()
-    targets = torch.cat(targets, dim=0).detach()
     pred_score = torch.softmax(outputs, dim=1)
-    loss = loss_fn(outputs, targets).cpu().item()
-    outputs = outputs.cpu().numpy()
-    targets = targets.cpu().numpy()
-    pred_score = pred_score.cpu().numpy()
-    acc = ACC(outputs, targets)
-    f1 = F1_score(outputs, targets)
-    recall = Recall(outputs, targets)
-    # specificity = Specificity(outputs, targets)
-    precision = Precision(outputs, targets)
-    kappa = Cohen_Kappa(outputs, targets)
-    report = cls_report(outputs, targets)
-    cm = confusion_matrix(outputs, targets)
-    metrics = OrderedDict([
-        ('acc', acc),
-        ('f1', f1),
-        ('recall', recall),
-        ('precision', precision),
-        ('kappa', kappa),
-        ('confusion matrix', cm),
-        ('classification report', report),
-    ])
-    return metrics, pred_score
+    return pred_score.cpu().numpy()
 
-def write_results2txt(results_dir, results):
-    results_file = os.path.join(results_dir, 'results.txt')
-    file = open(results_file, 'w')
-    file.write(results)
-    file.close()
 
 def write_score2json(score_info, args):
-    score_info = score_info.astype(np.float)
+    score_info = score_info.astype(float)
     score_list = []
     anno_info = np.loadtxt(args.val_anno_file, dtype=np.str_)
     for idx, item in enumerate(anno_info):
         id = item[0].rsplit('/', 1)[-1]
-        label = int(item[1])
         score = list(score_info[idx])
         pred = score.index(max(score))
         pred_info = {
             'image_id': id,
-            'label': label,
             'prediction': pred,
             'score': score,
         }
         score_list.append(pred_info)
     json_data = json.dumps(score_list, indent=4)
-    file = open(os.path.join(args.results_dir, 'score.json'), 'w')
+    # save_name = os.path.join(args.results_dir, args.team_name+'.json')
+    save_name = os.path.join(args.results_dir, 'score.json')
+    file = open(save_name, 'w')
     file.write(json_data)
     file.close()
+    _logger.info(f"Prediction has been saved to '{save_name}'.")
 
 def main():
     setup_default_logging()
     args = parser.parse_args()
-    results, score = validate(args)
-    output_str = 'Test Results:\n'
-    for key, value in results.items():
-        if key == 'confusion matrix':
-            output_str += f'{key}:\n {value}\n'
-        elif key == 'classification report':
-            output_str += f'{key}:\n {value}\n'
-        else:
-            output_str += f'{key}: {value}\n'
+    score = validate(args)
     os.makedirs(args.results_dir, exist_ok=True)
-    write_results2txt(args.results_dir, output_str)
     write_score2json(score, args)
-    print(output_str)
 
 if __name__ == '__main__':
     main()
