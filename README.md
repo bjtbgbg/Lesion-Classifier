@@ -31,9 +31,9 @@ This will produce prediction files under the subfolders of `./pred_results/outpu
 
 ### 2. Model ensembling
 
-Merge scores from prediction files above using the following command.
+Merge scores from all the prediction files above using the following command.
 
 ```
 $ sh ./main/do_ensemble.sh
 ```
-The final prediction file `./pred_results/merged_score.json` will be generated.
+This will generate final prediction file `./pred_results/merged_score.json`.
