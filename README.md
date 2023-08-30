@@ -23,7 +23,7 @@ sh ./main/do_train.sh
 ## Prediction
 ### 1. Model inference 
 
-Download [trained model weights](https://pan.baidu.com/s/11uyrd9fPK8rskCMJSz6pXA?pwd=dt94) (Password: dt94) of two sets of 5-fold cross-validation models and place them in the `./ckpts` folder. Then use the following command to make predictions.
+Download our [trained model weights](https://pan.baidu.com/s/11uyrd9fPK8rskCMJSz6pXA?pwd=dt94) (Password: dt94) of two sets of 5-fold cross-validation models and place them in the `./ckpts` folder. Then use the following command to make predictions.
 
 ```
 $ sh ./main/do_prediction.sh
