@@ -1,9 +1,9 @@
 ## Usage
 First, clone the repository locally:
 ```
-$ git clone https://github.com/bjtbgbg/crispy-train.git
+$ git clone https://github.com/bjtbgbg/Lesion-Classifier.git
 ```
-Install the provided dependencies:
+To install all required dependencies, run:
 ```
 $ pip install -r requirements.txt
 ```
@@ -14,7 +14,7 @@ We used the provided lesion-centered 3D ROIs from the `classification_dataset` f
 We randomly generated a 5-fold cross-validated dataset. You can refer to the divided label files in the following path `./data/classification_dataset/labels`.
 
 ## Training
-The pretrained model was extracted from the official repository of [Uniformer-B](https://github.com/Sense-X/UniFormer/tree/main/video_classification) and parameters of mismatching shapes was removed. 
+The pretrained model was extracted from the official repository of [Uniformer-B](https://github.com/Sense-X/UniFormer/tree/main/video_classification) (specified as Kinetics-400, #Frame:8x1x4, Sampling Stride:8) and layers of mismatching shapes was removed. 
 Download the [pruned pretrained model](https://pan.baidu.com/s/1pAw30E5hIGRHKC9wqbWmXQ?pwd=m2vi) (Password：m2vi) and put it into `./pretrained_weights/`, then use the following command to train two sets of 5-fold cross-validation models.
 
 ```
@@ -28,7 +28,7 @@ Download [trained model weights](https://pan.baidu.com/s/11uyrd9fPK8rskCMJSz6pXA
 ```
 $ sh ./main/do_prediction.sh
 ```
-This will produce prediction files under the sub-folders of `./pred_results`.
+This will produce prediction files under the subfolders of `./pred_results/output_uniformerB_bs8_cutc-1-0.5-zeros` and `./pred_results/output_uniformerB_mixup_bs4`.
 
 ### 2. Model ensembling
 
@@ -37,4 +37,4 @@ Merge scores from prediction files above using the following command.
 ```
 $ sh ./main/do_ensemble.sh
 ```
-The final prediction file will be generated under the root of `./pred_results`.
+The final prediction file `./pred_results/merged_score.json` will be generated.
