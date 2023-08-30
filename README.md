@@ -13,7 +13,7 @@ We used the provided lesion-centered 3D ROIs from the `classification_dataset` f
 ### 2. Data division
 We randomly generated a 5-fold cross-validated dataset. You can refer to the divided label files in the following path `./data/classification_dataset/labels`.
 
-## Predict
+## Prediction
 ### 1. Model inference 
 
 Download [trained model weights](https://pan.baidu.com/s/11uyrd9fPK8rskCMJSz6pXA?pwd=dt94) (Password: dt94) of two sets of 5-fold cross-validation models and place them in the `./ckpts` folder. Then use the following command to make predictions.
